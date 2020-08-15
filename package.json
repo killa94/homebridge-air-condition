@@ -4,7 +4,7 @@
   "description": "An example accessory plugin for homebridge written in Typescript",
   "main": "dist/accessory.js",
   "scripts": {
-    "build": "tsc && npm version patch && sudo npm install -g ."
+    "build": "tsc && npm version patch --no-git-tag-version && sudo npm install -g ."
   },
   "engines": {
     "homebridge": ">=1.0.0"
