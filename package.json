@@ -1,0 +1,23 @@
+{
+  "name": "homebridge-air-condition",
+  "version": "1.0.22",
+  "description": "An example accessory plugin for homebridge written in Typescript",
+  "main": "dist/accessory.js",
+  "scripts": {
+    "build": "tsc && npm version patch && sudo npm install -g ."
+  },
+  "engines": {
+    "homebridge": ">=1.0.0"
+  },
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "devDependencies": {
+    "@types/node": "10.17.19",
+    "typescript": "3.9.7",
+    "homebridge": "^1.1.1"
+  },
+  "dependencies": {
+    "axios": "^0.19.2"
+  }
+}
