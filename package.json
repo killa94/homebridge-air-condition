@@ -1,6 +1,6 @@
 {
   "name": "homebridge-air-condition",
-  "version": "1.0.22",
+  "version": "1.0.31",
   "description": "An example accessory plugin for homebridge written in Typescript",
   "main": "dist/accessory.js",
   "scripts": {

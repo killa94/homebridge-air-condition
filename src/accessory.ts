@@ -43,38 +43,29 @@ class AirConditionPlugin {
             .setCharacteristic(this.api.hap.Characteristic.Model, "Custom Model");
 
         // create a new "Switch" service
-        this.switchService = new this.api.hap.Service.Switch('AirCondition');
+        this.switchService = new this.api.hap.Service.Switch('Accssory Switch');
 
         // create a new "Thermostat" service
-        this.thermostatService = new this.api.hap.Service.Thermostat('AirCondition');
+        this.thermostatService = new this.api.hap.Service.Thermostat('Thermostat');
 
         // link methods used when getting or setting the state of the service 
         this.switchService.getCharacteristic(this.api.hap.Characteristic.On)
             .on('get', this.getOnHandler.bind(this))   // bind to getOnHandler method below
             .on('set', this.setOnHandler.bind(this));  // bind to setOnHandler method below
 
-        // link methods used when getting or setting the state of the service 
-        //this.switchService.getCharacteristic(this.api.hap.Characteristic.TargetHeatingCoolingState)
-        //    .on('get', this.getOnHandler.bind(this))   // bind to getOnHandler method below
-        //    .on('set', this.setOnHandler.bind(this));  // bind to setOnHandler method below
-
         this.thermostatService.getCharacteristic(this.api.hap.Characteristic.CurrentHeatingCoolingState)
-            .on('get', this.handleCurrentHeatingCoolingStateGet.bind(this));
+            .on('get', this.getHeatingCoolingStat.bind(this));
 
         this.thermostatService.getCharacteristic(this.api.hap.Characteristic.TargetHeatingCoolingState)
-            .on('get', this.handleTargetHeatingCoolingStateGet.bind(this))
-            .on('set', this.handleTargetHeatingCoolingStateSet.bind(this));
+            .on('get', this.getHeatingCoolingStat.bind(this))
+            .on('set', this.setHeatingCoolingState.bind(this));
 
         this.thermostatService.getCharacteristic(this.api.hap.Characteristic.CurrentTemperature)
-            .on('get', this.handleCurrentTemperatureGet.bind(this));
+            .on('get', this.getTemperature.bind(this));
 
         this.thermostatService.getCharacteristic(this.api.hap.Characteristic.TargetTemperature)
-            .on('get', this.handleTargetTemperatureGet.bind(this))
-            .on('set', this.handleTargetTemperatureSet.bind(this));
-
-        this.thermostatService.getCharacteristic(this.api.hap.Characteristic.TemperatureDisplayUnits)
-            .on('get', this.handleTemperatureDisplayUnitsGet.bind(this))
-            .on('set', this.handleTemperatureDisplayUnitsSet.bind(this));
+            .on('get', this.getTemperature.bind(this))
+            .on('set', this.setTemperature.bind(this));
     }
 
     /**
@@ -90,7 +81,7 @@ class AirConditionPlugin {
     }
 
     async getOnHandler(callback: CharacteristicGetCallback): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/state');
+        const response = await axios.get(`${this.config.serviceUrl}/air-condition/state`);
         if (response.status !== 200) {
             return callback(new Error(response.data));
         }
@@ -104,43 +95,16 @@ class AirConditionPlugin {
     async setOnHandler(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
         this.log.info('Setting air condition state to:', value);
         if (value) {
-            await this.turnOn();
+            await axios.get(`${this.config.serviceUrl}/air-condition/turn-on`);
         } else {
-            await this.turnOff();
+            await axios.get(`${this.config.serviceUrl}/air-condition/turn-off`);
         }
         // the first argument of the callback should be null if there are no errors
         callback(null);
     }
 
-    async turnOn(): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/turn-on');
-    }
-
-    async turnOff(): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/turn-off');
-    }
-
-    /**
-   * Handle requests to get the current value of the "Current Heating Cooling State" characteristic
-   */
-    async handleCurrentHeatingCoolingStateGet(callback: CharacteristicGetCallback): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/mode');
-        if (response.status !== 200) {
-            return callback(new Error(response.data));
-        }
-
-        this.log.info('Getting current mode', response.data.mode);
-        // the first argument of the callback should be null if there are no errors
-        // the second argument contains the current status of the device to return.
-        callback(null, response.data.mode);
-    }
-
-
-    /**
-     * Handle requests to get the current value of the "Target Heating Cooling State" characteristic
-     */
-    async handleTargetHeatingCoolingStateGet(callback: CharacteristicGetCallback): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/mode');
+    async getHeatingCoolingStat(callback: CharacteristicGetCallback): Promise<void> {
+        const response = await axios.get(`${this.config.serviceUrl}/air-condition/mode`);
         if (response.status !== 200) {
             return callback(new Error(response.data));
         }
@@ -151,13 +115,10 @@ class AirConditionPlugin {
         callback(null, response.data.mode);
     }
 
-    /**
-     * Handle requests to set the "Target Heating Cooling State" characteristic
-     */
-    async handleTargetHeatingCoolingStateSet(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
+    async setHeatingCoolingState(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
         this.log.info('Setting mode to:', value);
 
-        const response = await axios.post('http://192.168.0.29:8083/air-condition/mode', { mode: value });
+        const response = await axios.post(`${this.config.serviceUrl}/air-condition/mode`, { mode: value });
         if (response.status === 400 && response.data.errorCode === 'alreadyInTargetMode') {
             return callback(null);
         } else if (response.status !== 200) {
@@ -169,27 +130,8 @@ class AirConditionPlugin {
         callback(null);
     }
 
-    /**
-     * Handle requests to get the current value of the "Current Temperature" characteristic
-     */
-    async handleCurrentTemperatureGet(callback: CharacteristicGetCallback): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/temperature');
-        if (response.status !== 200) {
-            return callback(new Error(response.data));
-        }
-
-        this.log.info('Getting current temperature', response.data.temperature);
-        // the first argument of the callback should be null if there are no errors
-        // the second argument contains the current status of the device to return.
-        callback(null, response.data.temperature);
-    }
-
-
-    /**
-     * Handle requests to get the current value of the "Target Temperature" characteristic
-     */
-    async handleTargetTemperatureGet(callback: CharacteristicGetCallback): Promise<void> {
-        const response = await axios.get('http://192.168.0.29:8083/air-condition/temperature');
+    async getTemperature(callback: CharacteristicGetCallback): Promise<void> {
+        const response = await axios.get(`${this.config.serviceUrl}/air-condition/temperature`);
         if (response.status !== 200) {
             return callback(new Error(response.data));
         }
@@ -200,40 +142,16 @@ class AirConditionPlugin {
         callback(null, response.data.temperature);
     }
 
-    /**
-     * Handle requests to set the "Target Temperature" characteristic
-     */
-    async handleTargetTemperatureSet(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
+    async setTemperature(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
         this.log.info('Setting temperature to:', value);
 
-        const response = await axios.post('http://192.168.0.29:8083/air-condition/temperature', { temperature: value });
+        const response = await axios.post(`${this.config.serviceUrl}/air-condition/temperature`, { temperature: value });
         if (response.status !== 200) {
             return callback(new Error(response.data));
         }
 
         this.switchService.updateCharacteristic(this.api.hap.Characteristic.On, 1);
         // the first argument of the callback should be null if there are no errors
-        callback(null);
-    }
-
-    /**
-     * Handle requests to get the current value of the "Temperature Display Units" characteristic
-     */
-    handleTemperatureDisplayUnitsGet(callback: CharacteristicGetCallback) {
-        this.log.debug('Triggered GET TemperatureDisplayUnits');
-
-        // set this to a valid value for TemperatureDisplayUnits
-        const currentValue = 1;
-
-        callback(null, currentValue);
-    }
-
-    /**
-     * Handle requests to set the "Temperature Display Units" characteristic
-     */
-    handleTemperatureDisplayUnitsSet(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-        this.log.debug('Triggered SET TemperatureDisplayUnits:', value);
-
         callback(null);
     }
 }
